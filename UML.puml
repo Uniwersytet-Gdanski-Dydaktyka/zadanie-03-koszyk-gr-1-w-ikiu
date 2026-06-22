@@ -1,0 +1,109 @@
+@startuml Koszyk Internetowy - JavaMarkt
+
+skinparam classAttributeIconSize 0
+
+interface Promotion {
+    + apply(products: List<Product>): List<Product>
+}
+
+class Product {
+    - code: String
+    - name: String
+    - price: double
+    - discountPrice: double
+    --
+    + Product(code, name, price)
+    + withDiscountPrice(newDiscountPrice: double): Product
+    + getCode(): String
+    + getName(): String
+    + getPrice(): double
+    + getDiscountPrice(): double
+}
+
+class Cart {
+    - products: List<Product>
+    --
+    + addProduct(product: Product): void
+    + getTotalPrice(): double
+    + sort(comparator: Comparator<Product>): void
+    + getCheapest(): Optional<Product>
+    + getMostExpensive(): Optional<Product>
+    + getCheapest(n: int): List<Product>
+    + getMostExpensive(n: int): List<Product>
+    + applyPromotion(strategy: Promotion): void
+    + getProducts(): List<Product>
+}
+
+class ValueDiscountPromotion {
+    - MIN_VALUE: double = 300.0
+    - DISCOUNT_MULTIPLIER: double = 0.95
+    --
+    + apply(products: List<Product>): List<Product>
+}
+
+class BuyTwoGetOneFreePromotion {
+    + apply(products: List<Product>): List<Product>
+}
+
+class FreeMugPromotion {
+    - MIN_VALUE: double = 200.0
+    - MUG_CODE: String = "MUG-01"
+    --
+    + apply(products: List<Product>): List<Product>
+}
+
+class CouponPromotion {
+    - targetProductCode: String
+    - DISCOUNT_MULTIPLIER: double = 0.70
+    --
+    + CouponPromotion(targetProductCode: String)
+    + apply(products: List<Product>): List<Product>
+}
+
+class ProductComparators {
+    + {static} DEFAULT_ORDER: Comparator<Product>
+    + {static} BY_CODE: Comparator<Product>
+}
+
+class PromotionOptimizer {
+    + {static} getBestPrice(cart: Cart, promotions: List<Promotion>): OptimizationResult
+    - {static} generatePermutations(list: List<Promotion>): List<List<Promotion>>
+}
+
+class OptimizationResult {
+    - bestPrice: double
+    - bestOrder: List<Promotion>
+    --
+    + getBestPrice(): double
+    + getBestOrder(): List<Promotion>
+}
+
+' relacje
+Cart "1" o-- "0..*" Product : zawiera
+Cart ..> Promotion : uses <<Strategy>>
+Cart ..> ProductComparators : uses
+
+ValueDiscountPromotion   ..|> Promotion
+BuyTwoGetOneFreePromotion ..|> Promotion
+FreeMugPromotion          ..|> Promotion
+CouponPromotion           ..|> Promotion
+
+PromotionOptimizer ..> Cart             : analizuje
+PromotionOptimizer ..> OptimizationResult : zwraca
+OptimizationResult o-- "0..*" Promotion : bestOrder
+
+note top of Promotion
+  Wzorzec Strategy:
+  każda promocja to osobna klasa
+  implementująca ten interfejs.
+  Nowe promocje — nowe klasy,
+  bez modyfikacji Cart (OCP).
+end note
+
+note right of Product
+  Klasa niemutowalna (immutable).
+  Zmiana ceny = nowy obiekt
+  przez withDiscountPrice().
+end note
+
+@enduml
